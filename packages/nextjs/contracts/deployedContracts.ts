@@ -7,7 +7,7 @@ import { GenericContractsDeclaration } from "~~/utils/scaffold-eth/contract";
 const deployedContracts = {
   10143: {
     TicketEngine: {
-      address: "0xd2F867cB70971c6A2A5259fFa2D925fA879329aF",
+      address: "0x94b7c9aaa544391a9bbb2F695d3a27ac1bAD556D",
       abi: [
         {
           inputs: [],
@@ -1128,7 +1128,7 @@ const deployedContracts = {
         tokenURI: "@openzeppelin/contracts/token/ERC721/ERC721.sol",
         transferFrom: "@openzeppelin/contracts/token/ERC721/ERC721.sol",
       },
-      deployedOnBlock: 6715757,
+      deployedOnBlock: 6726122,
     },
   },
 } as const;
