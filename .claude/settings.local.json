@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Skill(superpowers:writing-plans)",
+      "Bash(dir /b \"D:\\\\project\\\\pers\\\\ticket-allocation-engine\\\\packages\")",
+      "Bash(yarn compile)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(yarn hardhat test:*)",
+      "Bash(yarn test)",
+      "Bash(yarn test:*)",
+      "Bash(yarn next build)"
+    ]
+  }
+}

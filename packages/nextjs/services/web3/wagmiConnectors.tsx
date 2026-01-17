@@ -13,6 +13,9 @@ import scaffoldConfig from "~~/scaffold.config";
 
 const { onlyLocalBurnerWallet, targetNetworks } = scaffoldConfig;
 
+// Only include burner wallet when running on local hardhat network
+const isLocalNetwork = targetNetworks.every(network => network.id === (chains.hardhat as chains.Chain).id);
+
 const wallets = [
   metaMaskWallet,
   walletConnectWallet,
@@ -20,9 +23,7 @@ const wallets = [
   baseAccount,
   rainbowWallet,
   safeWallet,
-  ...(!targetNetworks.some(network => network.id !== (chains.hardhat as chains.Chain).id) || !onlyLocalBurnerWallet
-    ? [rainbowkitBurnerWallet]
-    : []),
+  ...(isLocalNetwork && !onlyLocalBurnerWallet ? [rainbowkitBurnerWallet] : []),
 ];
 
 /**

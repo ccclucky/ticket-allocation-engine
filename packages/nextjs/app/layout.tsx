@@ -6,8 +6,8 @@ import "~~/styles/globals.css";
 import { getMetadata } from "~~/utils/scaffold-eth/getMetadata";
 
 export const metadata = getMetadata({
-  title: "Scaffold-ETH 2 App",
-  description: "Built with 🏗 Scaffold-ETH 2",
+  title: "抢票裁定引擎 - Ticket Engine",
+  description: "公平、透明、先到先得的链上抢票系统",
 });
 
 const ScaffoldEthApp = ({ children }: { children: React.ReactNode }) => {

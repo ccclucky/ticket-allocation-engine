@@ -1,80 +1,73 @@
 "use client";
 
 import Link from "next/link";
-import { Address } from "@scaffold-ui/components";
 import type { NextPage } from "next";
-import { hardhat } from "viem/chains";
-import { useAccount } from "wagmi";
-import { BugAntIcon, MagnifyingGlassIcon } from "@heroicons/react/24/outline";
-import { useTargetNetwork } from "~~/hooks/scaffold-eth";
+import { PlusCircleIcon, TicketIcon } from "@heroicons/react/24/outline";
+import { EventCard } from "~~/components/ticket-engine";
+import { useTicketEngine } from "~~/hooks/useTicketEngine";
 
 const Home: NextPage = () => {
-  const { address: connectedAddress } = useAccount();
-  const { targetNetwork } = useTargetNetwork();
+  const { events } = useTicketEngine();
+
+  const sortedEvents = [...events].sort((a, b) => {
+    const statusOrder: Record<number, number> = { 1: 0, 0: 1, 2: 2 };
+    return statusOrder[a.status] - statusOrder[b.status];
+  });
 
   return (
-    <>
-      <div className="flex items-center flex-col grow pt-10">
-        <div className="px-5">
-          <h1 className="text-center">
-            <span className="block text-2xl mb-2">Welcome to</span>
-            <span className="block text-4xl font-bold">Scaffold-ETH 2</span>
+    <div className="flex flex-col grow">
+      {/* Hero Section */}
+      <div className="bg-gradient-to-br from-primary/10 via-base-100 to-secondary/10 py-16 px-4">
+        <div className="max-w-4xl mx-auto text-center">
+          <div className="flex justify-center mb-6">
+            <div className="p-4 bg-primary/10 rounded-full">
+              <TicketIcon className="h-16 w-16 text-primary" />
+            </div>
+          </div>
+          <h1 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+            抢票裁定引擎
           </h1>
-          <div className="flex justify-center items-center space-x-2 flex-col">
-            <p className="my-2 font-medium">Connected Address:</p>
-            <Address
-              address={connectedAddress}
-              chain={targetNetwork}
-              blockExplorerAddressLink={
-                targetNetwork.id === hardhat.id ? `/blockexplorer/address/${connectedAddress}` : undefined
-              }
-            />
-          </div>
-
-          <p className="text-center text-lg">
-            Get started by editing{" "}
-            <code className="italic bg-base-300 text-base font-bold max-w-full break-words break-all inline-block">
-              packages/nextjs/app/page.tsx
-            </code>
+          <p className="text-lg text-base-content/70 mb-8 max-w-2xl mx-auto">
+            公平、透明、先到先得的链上抢票系统
+            <br />
+            <span className="text-sm">First-come-first-served ticket allocation with on-chain transparency</span>
           </p>
-          <p className="text-center text-lg">
-            Edit your smart contract{" "}
-            <code className="italic bg-base-300 text-base font-bold max-w-full break-words break-all inline-block">
-              YourContract.sol
-            </code>{" "}
-            in{" "}
-            <code className="italic bg-base-300 text-base font-bold max-w-full break-words break-all inline-block">
-              packages/hardhat/contracts
-            </code>
-          </p>
-        </div>
-
-        <div className="grow bg-base-300 w-full mt-16 px-8 py-12">
-          <div className="flex justify-center items-center gap-12 flex-col md:flex-row">
-            <div className="flex flex-col bg-base-100 px-10 py-10 text-center items-center max-w-xs rounded-3xl">
-              <BugAntIcon className="h-8 w-8 fill-secondary" />
-              <p>
-                Tinker with your smart contract using the{" "}
-                <Link href="/debug" passHref className="link">
-                  Debug Contracts
-                </Link>{" "}
-                tab.
-              </p>
-            </div>
-            <div className="flex flex-col bg-base-100 px-10 py-10 text-center items-center max-w-xs rounded-3xl">
-              <MagnifyingGlassIcon className="h-8 w-8 fill-secondary" />
-              <p>
-                Explore your local transactions with the{" "}
-                <Link href="/blockexplorer" passHref className="link">
-                  Block Explorer
-                </Link>{" "}
-                tab.
-              </p>
-            </div>
-          </div>
+          <Link href="/create">
+            <button className="btn btn-primary btn-lg gap-2 shadow-lg hover:shadow-xl transition-shadow">
+              <PlusCircleIcon className="h-6 w-6" />
+              创建活动
+            </button>
+          </Link>
         </div>
       </div>
-    </>
+
+      {/* Events Grid */}
+      <div className="flex-grow p-4 md:p-8 bg-base-200/30">
+        <div className="max-w-6xl mx-auto">
+          <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
+            <TicketIcon className="h-6 w-6 text-primary" />
+            活动广场
+          </h2>
+
+          {events.length === 0 ? (
+            <div className="text-center py-16 bg-base-100 rounded-2xl shadow-sm">
+              <div className="text-7xl mb-6">🎫</div>
+              <h3 className="text-xl font-semibold mb-2">暂无活动</h3>
+              <p className="text-base-content/70 mb-6">成为第一个创建抢票活动的人吧！</p>
+              <Link href="/create">
+                <button className="btn btn-primary">创建一个活动</button>
+              </Link>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {sortedEvents.map(event => (
+                <EventCard key={event.id.toString()} event={event} />
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
   );
 };
 
