@@ -1,80 +1,125 @@
-# 🏗 Scaffold-ETH 2
+# 🎟️ 抢票裁定引擎 (Ticket Allocation Engine - MVP)
 
-<h4 align="center">
-  <a href="https://docs.scaffoldeth.io">Documentation</a> |
-  <a href="https://scaffoldeth.io">Website</a>
-</h4>
+一个基于 **Monad Testnet** 构建的去中心化、透明且公平的抢票裁定引擎。本项目旨在利用区块链技术解决稀缺资源高并发抢夺场景下的信任与公平性问题，确保结果透明不可篡改。
 
-🧪 An open-source, up-to-date toolkit for building decentralized applications (dapps) on the Ethereum blockchain. It's designed to make it easier for developers to create and deploy smart contracts and build user interfaces that interact with those contracts.
+![Status](https://img.shields.io/badge/状态-MVP%20已实现-success)
+![Network](https://img.shields.io/badge/网络-Monad%20Testnet-purple)
 
-⚙️ Built using NextJS, RainbowKit, Hardhat, Wagmi, Viem, and Typescript.
+## 📖 项目概述
 
-- ✅ **Contract Hot Reload**: Your frontend auto-adapts to your smart contract as you edit it.
-- 🪝 **[Custom hooks](https://docs.scaffoldeth.io/hooks/)**: Collection of React hooks wrapper around [wagmi](https://wagmi.sh/) to simplify interactions with smart contracts with typescript autocompletion.
-- 🧱 [**Components**](https://docs.scaffoldeth.io/components/): Collection of common web3 components to quickly build your frontend.
-- 🔥 **Burner Wallet & Local Faucet**: Quickly test your application with a burner wallet and local faucet.
-- 🔐 **Integration with Wallet Providers**: Connect to different wallet providers and interact with the Ethereum network.
+**抢票裁定引擎** 允许主办方发布限量票务活动，用户通过“先到先得”的方式参与抢票。每一次成功的抢票都会实时铸造一枚唯一的 **ERC721 NFT 门票** 并发送至用户的钱包。
 
-![Debug Contracts tab](https://github.com/scaffold-eth/scaffold-eth-2/assets/55535804/b237af0c-5027-4849-a5c1-2e31495cccb1)
+**核心解决的问题：**
+- **公平性**：拒绝暗箱操作和后台预留。
+- **透明性**：剩余票数和交易结果全链上实时可见。
+- **所有权**：门票即资产（NFT），真正由用户持有。
 
-## Requirements
+## ✨ 核心特性
 
-Before you begin, you need to install the following tools:
+- **🛡️ 链上公平验证**：所有裁定逻辑（检查时间、剩余票数、限购规则）均由智能合约 `TicketEngine.sol` 原子化执行。
+- **⚡ 适配高并发**：专为 Monad 区块链的高吞吐能力设计，从容应对抢票流量。
+- **🖼️ 链上 SVG NFT**：门票以 ERC721 标准铸造，且图片元数据（SVG）直接由合约动态生成，无需依赖中心化存储。
+- **📱 现代化交互**：基于 Next.js 和 TailwindCSS 构建的丝滑前端体验。
+- **👤 个人资产中心**：提供“我的”页面，集中展示抢到的 NFT 门票和历史参与记录。
+- **🛠️ 零代码发布**：主办方通过前端界面即可创建并发布上链活动。
 
-- [Node (>= v20.18.3)](https://nodejs.org/en/download/)
-- Yarn ([v1](https://classic.yarnpkg.com/en/docs/install/) or [v2+](https://yarnpkg.com/getting-started/install))
-- [Git](https://git-scm.com/downloads)
+## 🛠️ 技术栈
 
-## Quickstart
+- **区块链网络**: Monad Testnet (EVM 兼容)
+- **合约框架**: Hardhat
+- **前端框架**: Next.js (React)
+- **UI 样式**: TailwindCSS + DaisyUI
+- **Web3 集成**: Wagmi, Viem, RainbowKit
+- **合约标准**: ERC721 (OpenZeppelin)
 
-To get started with Scaffold-ETH 2, follow the steps below:
+## 🚀 快速开始
 
-1. Install dependencies if it was skipped in CLI:
+### 前置要求
 
+- [Node.js](https://nodejs.org/) (>= v18)
+- [Yarn](https://yarnpkg.com/) (v1 or v2+)
+- [Git](https://git-scm.com/)
+
+### 1. 克隆仓库
+
+```bash
+git clone https://github.com/your-username/ticket-allocation-engine.git
+cd ticket-allocation-engine
 ```
-cd my-dapp-example
+
+### 2. 安装依赖
+
+```bash
 yarn install
 ```
 
-2. Run a local network in the first terminal:
+### 3. 配置部署账户
 
-```
-yarn chain
-```
+生成新的燃烧钱包（Burner Wallet）或导入已有私钥：
 
-This command starts a local Ethereum network using Hardhat. The network runs on your local machine and can be used for testing and development. You can customize the network configuration in `packages/hardhat/hardhat.config.ts`.
-
-3. On a second terminal, deploy the test contract:
-
-```
-yarn deploy
+```bash
+yarn generate
+# 或者
+# yarn account:import
 ```
 
-This command deploys a test smart contract to the local network. The contract is located in `packages/hardhat/contracts` and can be modified to suit your needs. The `yarn deploy` command uses the deploy script located in `packages/hardhat/deploy` to deploy the contract to the network. You can also customize the deploy script.
+> **注意：** 确保你的部署账户在 Monad Testnet 有足够的测试代币（MON）。
 
-4. On a third terminal, start your NextJS app:
+### 4. 部署智能合约
 
+将 `TicketEngine` 合约部署到 Monad 测试网：
+
+```bash
+yarn deploy --network monadTestnet
 ```
+
+如果需重置合约状态（强制重新部署）：
+```bash
+yarn deploy --network monadTestnet --reset
+```
+
+### 5. 启动前端
+
+在本地启动 Next.js 应用：
+
+```bash
 yarn start
 ```
 
-Visit your app on: `http://localhost:3000`. You can interact with your smart contract using the `Debug Contracts` page. You can tweak the app config in `packages/nextjs/scaffold.config.ts`.
+访问 `http://localhost:3000` 即可开始交互。
 
-Run smart contract test with `yarn hardhat:test`
+## 📂 项目结构
 
-- Edit your smart contracts in `packages/hardhat/contracts`
-- Edit your frontend homepage at `packages/nextjs/app/page.tsx`. For guidance on [routing](https://nextjs.org/docs/app/building-your-application/routing/defining-routes) and configuring [pages/layouts](https://nextjs.org/docs/app/building-your-application/routing/pages-and-layouts) checkout the Next.js documentation.
-- Edit your deployment scripts in `packages/hardhat/deploy`
+```
+├── packages
+│   ├── hardhat
+│   │   ├── contracts
+│   │   │   └── TicketEngine.sol  # 核心智能合约逻辑
+│   │   ├── deploy                # 部署脚本
+│   │   └── scripts               # 工具脚本
+│   └── nextjs
+│       ├── app                   # Next.js App Router 页面
+│       │   ├── create            # “创建活动”页
+│       │   ├── event/[id]        # “活动详情”页
+│       │   └── me                # “个人中心/票夹”页
+│       ├── components            # 通用 UI 组件
+│       └── scaffold.config.ts    # DApp 配置文件
+```
 
+## 📜 关键合约逻辑
 
-## Documentation
+核心逻辑位于 `TicketEngine.sol` 中：
+- **`createEvent(...)`**: 主办方调用此函数初始化并发布活动。
+- **`grabTicket(...)`**: 用户调用此函数尝试抢票。合约会严格校验：
+    1. 活动是否已开始？
+    2. 是否还有剩余票数？
+    3. 用户是否已持有该活动门票？（单人限购1张）
+    如果全部校验通过，合约将铸造并发送 NFT。
 
-Visit our [docs](https://docs.scaffoldeth.io) to learn how to start building with Scaffold-ETH 2.
+## 🤝 贡献指南
 
-To know more about its features, check out our [website](https://scaffoldeth.io).
+欢迎提交 Pull Request 帮助改进项目！
 
-## Contributing to Scaffold-ETH 2
+## 📄 许可证
 
-We welcome contributions to Scaffold-ETH 2!
-
-Please see [CONTRIBUTING.MD](https://github.com/scaffold-eth/scaffold-eth-2/blob/main/CONTRIBUTING.md) for more information and guidelines for contributing to Scaffold-ETH 2.
+本项目基于 MIT License 开源。

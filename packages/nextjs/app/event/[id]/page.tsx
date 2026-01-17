@@ -15,6 +15,7 @@ import {
   UserGroupIcon,
 } from "@heroicons/react/24/outline";
 import { useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
+import { useGrabbingSync } from "~~/hooks/useGrabbingSync";
 import { useEvent, useHasTicket, useRecentTickets } from "~~/hooks/useTicketEngine";
 import { useTransactionHistory } from "~~/hooks/useTransactionHistory";
 import { AttemptResult, EventStatus, getStatusColor, getStatusLabel } from "~~/types/ticket-engine";
@@ -40,7 +41,13 @@ export default function EventDetailPage() {
   const { hasTicket, ticketId } = useHasTicket(eventId, address);
   // Get more recent tickets for the winners panel
   const { recentTickets, refetch: refetchRecent } = useRecentTickets(eventId, 100n);
+  // Real-time grabbing sync via Supabase
+  const { grabbingList, startGrabbing, endGrabbing } = useGrabbingSync(eventId.toString());
   const { transactions, addTransaction } = useTransactionHistory();
+
+  // Filter out winners from grabbing list
+  const winnersSet = new Set(recentTickets.map((t: { owner: string }) => t.owner.toLowerCase()));
+  const activeGrabbingList = grabbingList.filter(g => !winnersSet.has(g.wallet_address.toLowerCase()));
 
   // Filter transactions for this event
   const eventTransactions = transactions.filter(tx => tx.eventId === eventId.toString() && tx.type === "grab");
@@ -100,7 +107,7 @@ export default function EventDetailPage() {
     const pollInterval = setInterval(() => {
       refetch();
       refetchRecent();
-    }, 2000);
+    }, 1000);
 
     return () => clearInterval(pollInterval);
   }, [currentStatus, refetch, refetchRecent]);
@@ -121,6 +128,9 @@ export default function EventDetailPage() {
     try {
       setGrabResult(null);
 
+      // Broadcast grabbing state to all clients via Supabase
+      await startGrabbing(address);
+
       txHash = await writeContractAsync({
         functionName: "grabTicket",
         args: [eventId],
@@ -138,6 +148,9 @@ export default function EventDetailPage() {
         const gasCost = (gasUsed * gasPrice).toString();
 
         const isSuccess = receipt.status === "success";
+
+        // Update grabbing status in Supabase
+        await endGrabbing(address, isSuccess);
 
         // Save to transaction history (persistent)
         const txRecord: TransactionRecord = {
@@ -179,6 +192,10 @@ export default function EventDetailPage() {
       }
     } catch (error: unknown) {
       console.error("Grab ticket error:", error);
+      // Update grabbing status on error
+      if (address) {
+        await endGrabbing(address, false);
+      }
       await refetch();
       notification.error("抢票失败，请重试");
     }
@@ -439,43 +456,85 @@ export default function EventDetailPage() {
             </div>
           </div>
 
-          {/* Right Panel - Winners */}
-          <div className="bg-base-100 rounded-2xl shadow-xl overflow-hidden">
-            <div className="bg-gradient-to-r from-yellow-500 to-orange-500 p-4">
-              <h3 className="font-bold text-lg text-white flex items-center gap-2">
-                <TrophyIcon className="h-6 w-6" />
-                中签榜单
-                <span className="badge badge-ghost ml-auto">
-                  {recentTickets.length} / {event.totalTickets.toString()}
-                </span>
-              </h3>
-            </div>
-            <div className="p-4 h-[500px] overflow-y-auto">
-              {recentTickets.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-full text-base-content/50">
-                  <TrophyIcon className="h-16 w-16 mb-4 opacity-30" />
-                  <p>等待幸运儿出现...</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 gap-2">
-                  {recentTickets.map((ticket: { ticketId: bigint; owner: string; acquiredAt: bigint }) => (
-                    <div
-                      key={ticket.ticketId.toString()}
-                      className="flex items-center justify-between p-3 bg-gradient-to-r from-yellow-500/5 to-orange-500/5 rounded-lg border border-yellow-500/20"
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white text-xs font-bold px-2 py-1 rounded">
-                          #{ticket.ticketId.toString()}
-                        </span>
-                        <span className="font-mono text-sm">
-                          {ticket.owner.slice(0, 8)}...{ticket.owner.slice(-6)}
-                        </span>
+          {/* Right Panel - Split into Grabbing and Winners */}
+          <div className="flex flex-col gap-4">
+            {/* Top Section - Currently Grabbing (Real-time via Supabase) */}
+            <div className="bg-base-100 rounded-2xl shadow-xl overflow-hidden">
+              <div className="bg-gradient-to-r from-blue-500 to-cyan-500 p-4">
+                <h3 className="font-bold text-lg text-white flex items-center gap-2">
+                  <UserGroupIcon className="h-6 w-6" />
+                  正在抢票
+                  <span className="badge badge-ghost ml-auto">{activeGrabbingList.length} 人</span>
+                </h3>
+              </div>
+              <div className="p-4 h-[200px] overflow-y-auto">
+                {activeGrabbingList.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-full text-base-content/50">
+                    <UserGroupIcon className="h-12 w-12 mb-2 opacity-30" />
+                    <p className="text-sm">暂无用户正在抢票...</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 gap-2">
+                    {activeGrabbingList.slice(0, 20).map((participant, index) => (
+                      <div
+                        key={`${participant.wallet_address}-${index}`}
+                        className="flex items-center justify-between p-3 bg-gradient-to-r from-blue-500/5 to-cyan-500/5 rounded-lg border border-blue-500/20"
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className="relative flex h-3 w-3">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-3 w-3 bg-blue-500"></span>
+                          </span>
+                          <span className="font-mono text-sm">
+                            {participant.wallet_address.slice(0, 8)}...{participant.wallet_address.slice(-6)}
+                          </span>
+                        </div>
+                        <span className="text-xs text-base-content/50">抢票中...</span>
                       </div>
-                      <span className="text-xs text-base-content/50">{formatTimeAgo(Number(ticket.acquiredAt))}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Bottom Section - Winners */}
+            <div className="bg-base-100 rounded-2xl shadow-xl overflow-hidden">
+              <div className="bg-gradient-to-r from-yellow-500 to-orange-500 p-4">
+                <h3 className="font-bold text-lg text-white flex items-center gap-2">
+                  <TrophyIcon className="h-6 w-6" />
+                  中签榜单
+                  <span className="badge badge-ghost ml-auto">
+                    {recentTickets.length} / {event.totalTickets.toString()}
+                  </span>
+                </h3>
+              </div>
+              <div className="p-4 h-[280px] overflow-y-auto">
+                {recentTickets.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-full text-base-content/50">
+                    <TrophyIcon className="h-16 w-16 mb-4 opacity-30" />
+                    <p>等待幸运儿出现...</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 gap-2">
+                    {recentTickets.map((ticket: { ticketId: bigint; owner: string; acquiredAt: bigint }) => (
+                      <div
+                        key={ticket.ticketId.toString()}
+                        className="flex items-center justify-between p-3 bg-gradient-to-r from-yellow-500/5 to-orange-500/5 rounded-lg border border-yellow-500/20"
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white text-xs font-bold px-2 py-1 rounded">
+                            #{ticket.ticketId.toString()}
+                          </span>
+                          <span className="font-mono text-sm">
+                            {ticket.owner.slice(0, 8)}...{ticket.owner.slice(-6)}
+                          </span>
+                        </div>
+                        <span className="text-xs text-base-content/50">{formatTimeAgo(Number(ticket.acquiredAt))}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>

@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { useAccount } from "wagmi";
-import { useScaffoldReadContract, useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
+import { useScaffoldEventHistory, useScaffoldReadContract, useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
 import { Attempt, AttemptResult, EventStatus, Ticket, TicketEvent } from "~~/types/ticket-engine";
 
 export const useTicketEngine = () => {
@@ -171,6 +171,63 @@ export const useTokenURI = (tokenId: bigint | undefined) => {
   const nftData = data ? parseTokenURI(data) : null;
 
   return { tokenURI: data, nftData, isLoading };
+};
+
+export type AttemptEvent = {
+  eventId: bigint;
+  participant: string;
+  result: AttemptResult;
+  timestamp: bigint;
+  blockNumber: bigint;
+};
+
+/**
+ * Hook to watch recent grab attempts for an event using AttemptRecorded events
+ * Returns unique participants who have attempted but not yet won
+ */
+export const useRecentAttempts = (eventId: bigint) => {
+  const {
+    data: attemptEvents,
+    isLoading,
+    refetch,
+  } = useScaffoldEventHistory({
+    contractName: "TicketEngine",
+    eventName: "AttemptRecorded",
+    fromBlock: 0n,
+    watch: true,
+    filters: { eventId },
+  });
+
+  // Get all unique participants who have made attempts
+  const allAttempts = useMemo(() => {
+    if (!attemptEvents) return [];
+
+    return attemptEvents
+      .map(event => ({
+        eventId: event.args.eventId as bigint,
+        participant: event.args.participant as string,
+        result: event.args.result as AttemptResult,
+        timestamp: event.args.timestamp as bigint,
+        blockNumber: event.blockNumber,
+      }))
+      .sort((a, b) => Number(b.timestamp - a.timestamp));
+  }, [attemptEvents]);
+
+  // Get unique participants (deduplicated by address, keep most recent attempt)
+  const uniqueParticipants = useMemo(() => {
+    const seen = new Set<string>();
+    return allAttempts.filter(a => {
+      if (seen.has(a.participant.toLowerCase())) return false;
+      seen.add(a.participant.toLowerCase());
+      return true;
+    });
+  }, [allAttempts]);
+
+  return {
+    attempts: uniqueParticipants,
+    isLoading,
+    refetch,
+  };
 };
 
 function parseTokenURI(uri: string): { name: string; description: string; image: string } | null {
